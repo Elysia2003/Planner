@@ -66,7 +66,10 @@ export const useFinanceStore = defineStore('finance', {
       return s.subscriptions
         .filter(x => x.nextChargeDate <= limit.toISOString().slice(0, 10))
         .sort((a, b) => a.nextChargeDate.localeCompare(b.nextChargeDate))
-    }
+    },
+    // 全部订阅（按扣款日期排序）
+    allSubscriptions: (s) =>
+      [...s.subscriptions].sort((a, b) => a.nextChargeDate.localeCompare(b.nextChargeDate))
   },
   actions: {
     async load() {
@@ -135,10 +138,18 @@ export const useFinanceStore = defineStore('finance', {
       Object.assign(g, patch)
       await db.savingGoals.put(toPlain(g))
     },
+    async removeSavingGoal(id: string) {
+      await db.savingGoals.delete(id)
+      this.savingGoals = this.savingGoals.filter(g => g.id !== id)
+    },
     async addSubscription(data: Partial<Subscription>) {
       const s: Subscription = { id: uid(), name: data.name || '订阅', amount: data.amount ?? 0, cycle: data.cycle || 'monthly', nextChargeDate: data.nextChargeDate || '', category: data.category || '其他', note: data.note || '', wantCancel: false }
       await db.subscriptions.add(toPlain(s))
       this.subscriptions.push(s)
+    },
+    async removeSubscription(id: string) {
+      await db.subscriptions.delete(id)
+      this.subscriptions = this.subscriptions.filter(s => s.id !== id)
     },
     async addInsurance(data: Partial<Insurance>) {
       const i: Insurance = { id: uid(), name: data.name || '保险', type: data.type || '', premium: data.premium ?? 0, dueDate: data.dueDate || '', beneficiary: data.beneficiary || '', note: data.note || '' }

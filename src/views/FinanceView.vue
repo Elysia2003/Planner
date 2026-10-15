@@ -107,6 +107,10 @@ async function addSaving() {
   })
   savingForm.value = { title: '', targetAmount: '', savedAmount: '' }
 }
+async function removeSaving(s: { id: string; title: string }) {
+  if (!confirm(`确定删除储蓄目标「${s.title}」？已存金额记录将一并移除。`)) return
+  await finance.removeSavingGoal(s.id)
+}
 
 // 订阅
 const subForm = ref({ name: '', amount: '', nextChargeDate: '' })
@@ -118,6 +122,10 @@ async function addSub() {
     nextChargeDate: subForm.value.nextChargeDate
   })
   subForm.value = { name: '', amount: '', nextChargeDate: '' }
+}
+async function removeSub(s: { id: string; name: string }) {
+  if (!confirm(`确定删除订阅「${s.name}」？`)) return
+  await finance.removeSubscription(s.id)
 }
 </script>
 
@@ -242,6 +250,7 @@ async function addSub() {
             <div class="saving-head">
               <span class="saving-title">{{ s.title }}</span>
               <span class="saving-amt">¥{{ fenToYuan(s.savedAmount) }} / ¥{{ fenToYuan(s.targetAmount) }}</span>
+              <button class="btn ghost sm danger" @click="removeSaving(s)">🗑</button>
             </div>
             <div class="progress">
               <div class="progress-fill" :style="{ width: (s.targetAmount ? s.savedAmount / s.targetAmount * 100 : 0) + '%' }"></div>
@@ -258,11 +267,12 @@ async function addSub() {
       <!-- 订阅提醒 -->
       <section class="card">
         <h2 class="card-title">订阅服务</h2>
-        <div v-if="finance.upcomingSubscriptions.length" class="sub-list">
-          <div v-for="s in finance.upcomingSubscriptions" :key="s.id" class="sub-item">
+        <div v-if="finance.allSubscriptions.length" class="sub-list">
+          <div v-for="s in finance.allSubscriptions" :key="s.id" class="sub-item">
             <span class="sub-name">{{ s.name }}</span>
             <span class="sub-amt">¥{{ fenToYuan(s.amount) }}/{{ s.cycle === 'monthly' ? '月' : '年' }}</span>
             <span class="sub-date">下次扣款 {{ s.nextChargeDate }}</span>
+            <button class="btn ghost sm danger" @click="removeSub(s)">🗑</button>
           </div>
         </div>
         <div class="row sub-add">

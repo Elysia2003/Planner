@@ -19,8 +19,6 @@ export const useTaskStore = defineStore('tasks', {
         x.dueDate && x.dueDate <= t
       )
     },
-    // 收集箱
-    inbox: (s) => s.tasks.filter(x => !x.deletedAt && x.status === 'todo' && !x.dueDate && !x.goalId),
     // 全部活跃（含重复任务展开后的实例由组件处理）
     active: (s) => s.tasks.filter(x => !x.deletedAt && x.status !== 'archived'),
     // 已完成

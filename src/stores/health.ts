@@ -18,7 +18,15 @@ export const useHealthStore = defineStore('health', {
     weightSeries: (s) =>
       s.records.filter(r => r.type === 'weight').sort((a, b) => a.date.localeCompare(b.date)),
     sleepSeries: (s) =>
-      s.records.filter(r => r.type === 'sleep').sort((a, b) => a.date.localeCompare(b.date))
+      s.records.filter(r => r.type === 'sleep').sort((a, b) => a.date.localeCompare(b.date)),
+    // BMI = 体重(kg) / 身高(m)^2，用最新的体重和身高
+    bmi: (s) => {
+      const weight = s.records.filter(r => r.type === 'weight').sort((a, b) => b.date.localeCompare(a.date)).pop()
+      const height = s.records.filter(r => r.type === 'height').sort((a, b) => b.date.localeCompare(a.date)).pop()
+      if (!weight || !height || height.value <= 0) return null
+      const h = height.value / 100
+      return weight.value / (h * h)
+    }
   },
   actions: {
     async load() {
@@ -54,6 +62,20 @@ export const useHealthStore = defineStore('health', {
         return amount
       }
     },
+    // 手动设置当日喝水量（用于纠错）
+    async setWater(date: string, value: number) {
+      const v = Math.max(0, Math.round(value))
+      const existing = this.records.find(r => r.type === 'water' && r.date === date)
+      if (existing) {
+        existing.value = v
+        await db.health.put(toPlain(existing))
+      } else {
+        const r: HealthRecord = { id: uid(), type: 'water', value: v, unit: '杯', date, note: '', createdAt: now() }
+        await db.health.add(toPlain(r))
+        this.records.push(r)
+      }
+      return v
+    },
     // 当日喝水总量
     todayWater(date: string): number {
       return this.records.find(r => r.type === 'water' && r.date === date)?.value || 0
@@ -70,6 +92,10 @@ export const useHealthStore = defineStore('health', {
       }
       await db.visits.add(toPlain(v))
       this.visits.push(v)
+    },
+    async removeVisit(id: string) {
+      await db.visits.delete(id)
+      this.visits = this.visits.filter(v => v.id !== id)
     }
   }
 })

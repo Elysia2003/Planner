@@ -8,7 +8,7 @@ import type { Task, Priority } from '@/types'
 const tasks = useTaskStore()
 const goals = useGoalStore()
 
-const filter = ref<'inbox' | 'today' | 'all' | 'done' | 'trash'>('today')
+const filter = ref<'today' | 'all' | 'done' | 'trash'>('today')
 const search = ref('')
 const showNew = ref(false)
 const editing = ref<Task | null>(null)
@@ -26,7 +26,6 @@ const form = ref({
 const list = computed(() => {
   let arr: Task[] = []
   switch (filter.value) {
-    case 'inbox': arr = tasks.inbox; break
     case 'today': arr = tasks.today; break
     case 'all': arr = tasks.active; break
     case 'done': arr = tasks.done; break
@@ -48,7 +47,6 @@ const list = computed(() => {
 
 const filters = [
   { key: 'today', label: '今日' },
-  { key: 'inbox', label: '收集箱' },
   { key: 'all', label: '全部' },
   { key: 'done', label: '已完成' },
   { key: 'trash', label: '回收站' }
@@ -203,8 +201,7 @@ function goalTitle(id: string | null) {
       </div>
       <div v-if="!list.length" class="empty">
         <div class="big">📭</div>
-        <span v-if="filter === 'inbox'">收集箱是空的，想到什么随手记下来</span>
-        <span v-else-if="filter === 'today'">今天没有任务，轻松一天 ✨</span>
+        <span v-if="filter === 'today'">今天没有任务，轻松一天 ✨</span>
         <span v-else>没有任务</span>
       </div>
     </div>

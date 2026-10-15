@@ -97,7 +97,7 @@ function goGoals() { router.push('/goals') }
         </div>
         <div v-else class="empty">
           <div class="big">🎉</div>
-          今天没有待办，去收集箱里加点东西吧
+          今天没有待办，去「任务」页添加吧
         </div>
       </section>
 

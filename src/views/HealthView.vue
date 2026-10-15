@@ -9,12 +9,11 @@ const types = [
   { key: 'weight', name: '体重', unit: 'kg' },
   { key: 'sleep', name: '睡眠', unit: '小时' },
   { key: 'height', name: '身高', unit: 'cm' },
-  { key: 'bmi', name: 'BMI', unit: '' },
   { key: 'bodyfat', name: '体脂率', unit: '%' },
   { key: 'steps', name: '步数', unit: '步' }
 ] as const
 
-const activeType = ref<'weight' | 'sleep' | 'height' | 'bmi' | 'bodyfat' | 'steps'>('weight')
+const activeType = ref<'weight' | 'sleep' | 'height' | 'bodyfat' | 'steps'>('weight')
 const value = ref('')
 const date = ref(todayStr())
 const showVisit = ref(false)
@@ -31,6 +30,39 @@ const latest = computed(() => health.latest(activeType.value))
 const waterToday = computed(() => health.todayWater(todayStr()))
 async function drinkWater() {
   await health.addWater(todayStr(), 1)
+}
+async function reduceWater() {
+  await health.addWater(todayStr(), -1)
+}
+async function adjustWater() {
+  const v = prompt('手动设置今日喝水杯数（用于纠错）', String(waterToday.value))
+  if (v === null) return
+  const n = Number(v)
+  if (isNaN(n)) { alert('请输入数字'); return }
+  await health.setWater(todayStr(), n)
+}
+
+// BMI（自动计算）
+const bmi = computed(() => health.bmi)
+function bmiLabel(v: number): string {
+  if (v < 18.5) return '偏瘦'
+  if (v < 24) return '正常'
+  if (v < 28) return '偏胖'
+  return '肥胖'
+}
+const statusClass = computed(() => {
+  const v = bmi.value
+  if (v === null) return 'normal'
+  if (v < 18.5) return 'thin'
+  if (v < 24) return 'normal'
+  if (v < 28) return 'over'
+  return 'obese'
+})
+
+// 就诊删除
+async function removeVisit(id: string) {
+  if (!confirm('确定删除这条就诊记录？')) return
+  await health.removeVisit(id)
 }
 
 async function save() {
@@ -67,7 +99,21 @@ async function addVisit() {
           <span class="water-count">{{ waterToday }} <em>杯</em></span>
         </div>
       </div>
-      <button class="btn primary water-btn" @click="drinkWater">＋ 喝一杯</button>
+      <div class="water-actions">
+        <button class="btn water-btn" title="减一杯" @click="reduceWater">−1</button>
+        <button class="btn primary water-btn" @click="drinkWater">＋ 喝一杯</button>
+        <button class="btn ghost sm" title="手动设置" @click="adjustWater">调整</button>
+      </div>
+    </div>
+
+    <!-- BMI 自动计算 -->
+    <div class="card bmi-card" v-if="bmi !== null">
+      <div class="bmi-info">
+        <span class="bmi-label">BMI</span>
+        <span class="bmi-value">{{ bmi.toFixed(1) }}</span>
+        <span class="bmi-status" :class="'bmi-' + statusClass">{{ bmiLabel(bmi) }}</span>
+      </div>
+      <span class="bmi-note">根据最新身高、体重自动计算</span>
     </div>
 
     <!-- 类型切换 -->
@@ -121,6 +167,7 @@ async function addVisit() {
             <span class="visit-date">{{ v.date }}</span>
             <span class="visit-hospital">{{ v.hospital }}</span>
             <span class="visit-doctor">{{ v.doctor }}</span>
+            <button class="btn ghost sm danger" @click="removeVisit(v.id)">🗑</button>
           </div>
           <div v-if="v.diagnosis" class="visit-diag">诊断：{{ v.diagnosis }}</div>
           <div v-if="v.prescription" class="visit-pres">处方：{{ v.prescription }}</div>
@@ -183,7 +230,23 @@ async function addVisit() {
 .water-label { font-size: 12.5px; color: var(--ink-3); }
 .water-count { font-size: 26px; font-weight: 650; color: var(--accent); }
 .water-count em { font-style: normal; font-size: 14px; font-weight: 500; color: var(--ink-3); }
-.water-btn { font-size: 14px; padding: 10px 18px; }
+.water-actions { display: flex; align-items: center; gap: 8px; }
+.water-btn { font-size: 14px; padding: 10px 16px; }
+
+.bmi-card {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; padding: 14px 16px;
+}
+.bmi-info { display: flex; align-items: baseline; gap: 10px; }
+.bmi-label { font-size: 13px; color: var(--ink-3); font-weight: 600; }
+.bmi-value { font-size: 26px; font-weight: 650; color: var(--accent); }
+.bmi-status { font-size: 12.5px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+.bmi-thin { background: var(--amber-soft); color: var(--amber); }
+.bmi-normal { background: var(--green-soft); color: var(--green); }
+.bmi-over { background: var(--amber-soft); color: var(--amber); }
+.bmi-obese { background: var(--red-soft); color: var(--red); }
+.bmi-note { font-size: 12px; color: var(--ink-3); }
+
 .current { margin-bottom: 12px; }
 .current-label { font-size: 13px; color: var(--ink-3); display: block; }
 .current-value { font-size: 30px; font-weight: 650; }
@@ -200,10 +263,11 @@ async function addVisit() {
 
 .visit-list { display: flex; flex-direction: column; gap: 10px; }
 .visit-item { padding: 10px 12px; background: var(--bg-2); border-radius: 9px; }
-.visit-head { display: flex; gap: 12px; font-size: 13px; }
+.visit-head { display: flex; align-items: center; gap: 12px; font-size: 13px; }
 .visit-date { color: var(--ink-3); }
 .visit-hospital { font-weight: 600; }
-.visit-doctor { color: var(--ink-2); }
+.visit-doctor { color: var(--ink-2); flex: 1; }
+.visit-head .danger { color: var(--red); }
 .visit-diag, .visit-pres { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; }
 
 .actions { display: flex; gap: 8px; margin-top: 4px; }
