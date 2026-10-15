@@ -51,16 +51,26 @@ async function remove(h: Habit) {
 
 async function recordMiss(h: Habit) {
   const reason = prompt('为什么没做到？(帮助找到真实阻力)')
-  if (reason !== null) await habits.recordMiss(h.id, todayStr(), reason)
+  if (reason !== null && reason.trim() !== '') await habits.recordMiss(h.id, todayStr(), reason.trim())
 }
 
-// 近 84 天（12 周）热力图数据
+// 今日未完成原因
+function todayMissReason(h: Habit): string {
+  return habits.missReasonOf(h.id, todayStr())
+}
+
+// 近 84 天（12 周）热力图数据，区分已完成/未完成/无记录
 function heatmap(habitId: string) {
-  const dates = new Set(habits.datesOf(habitId))
-  const days: { date: string; on: boolean }[] = []
+  const done = new Set(habits.datesOf(habitId))
+  const days: { date: string; state: 'done' | 'miss' | 'none'; reason: string }[] = []
   for (let i = 83; i >= 0; i--) {
     const d = addDays(todayStr(), -i)
-    days.push({ date: d, on: dates.has(d) })
+    if (done.has(d)) {
+      days.push({ date: d, state: 'done', reason: '' })
+    } else {
+      const reason = habits.missReasonOf(habitId, d)
+      days.push({ date: d, state: reason ? 'miss' : 'none', reason })
+    }
   }
   return days
 }
@@ -135,7 +145,12 @@ function heatmap(habitId: string) {
             >
               {{ habits.checkedToday(h.id) ? '✓ 已打卡' : '打卡' }}
             </button>
-            <button v-if="!habits.checkedToday(h.id)" class="btn sm ghost" @click="recordMiss(h)">记录没做到的原因</button>
+            <button v-if="!habits.checkedToday(h.id) && !todayMissReason(h)" class="btn sm ghost" @click="recordMiss(h)">记录没做到的原因</button>
+            <div v-if="todayMissReason(h)" class="miss-box">
+              <span class="miss-emoji">😔</span>
+              <span class="miss-text">今天未完成：{{ todayMissReason(h) }}</span>
+              <button class="btn sm ghost" @click="recordMiss(h)">修改</button>
+            </div>
           </div>
 
           <!-- 热力图 -->
@@ -143,9 +158,9 @@ function heatmap(habitId: string) {
             <div
               v-for="d in heatmap(h.id)" :key="d.date"
               class="heat-cell"
-              :class="{ on: d.on }"
-              :style="d.on ? { background: h.color } : {}"
-              :title="d.date + ' ' + weekday(d.date)"
+              :class="d.state"
+              :style="d.state === 'done' ? { background: h.color } : {}"
+              :title="d.date + ' ' + weekday(d.date) + (d.state === 'miss' ? ' · 未完成：' + d.reason : d.state === 'done' ? ' · 已完成' : '')"
             ></div>
           </div>
           <div class="heatmap-legend">
@@ -222,7 +237,16 @@ function heatmap(habitId: string) {
 
 .heatmap { display: grid; grid-template-columns: repeat(28, 1fr); gap: 3px; margin-top: 4px; }
 .heat-cell { aspect-ratio: 1; border-radius: 3px; background: var(--bg-2); }
+.heat-cell.miss { background: var(--red-soft); border: 1px solid var(--red); }
 .heatmap-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-3); margin-top: 5px; }
+
+.miss-box {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border-radius: 8px;
+  background: var(--red-soft); border: 1px solid var(--red-soft);
+}
+.miss-emoji { font-size: 15px; }
+.miss-text { font-size: 13px; color: var(--red); font-weight: 500; }
 
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
 .modal-box { width: 100%; max-width: 480px; }

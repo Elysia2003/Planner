@@ -135,13 +135,20 @@ export const DEFAULT_SETTINGS: Settings = {
   homeModules: ['today', 'goals', 'habits', 'finance', 'health'],
   tags: ['工作', '生活', '学习', '健康', '财务', '重要', '紧急'],
   categories: ['餐饮', '交通', '居住', '购物', '娱乐', '医疗', '教育', '人情', '其他'],
+  incomeCategories: ['工资', '奖金', '副业', '投资', '红包', '兼职', '其他'],
   createdAt: Date.now(),
   updatedAt: Date.now()
 }
 
 export async function ensureSettings(): Promise<Settings> {
   const s = await db.settings.get('app')
-  if (s) return s
+  if (s) {
+    // 兼容旧数据：补齐新增字段
+    let changed = false
+    if (!s.incomeCategories) { s.incomeCategories = DEFAULT_SETTINGS.incomeCategories; changed = true }
+    if (changed) await db.settings.put(s)
+    return s
+  }
   await db.settings.put({ ...DEFAULT_SETTINGS, id: 'app' })
   return (await db.settings.get('app'))!
 }

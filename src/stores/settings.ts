@@ -13,6 +13,7 @@ export const useSettingsStore = defineStore('settings', {
     isDark: (s) => s.settings?.theme === 'dark',
     tags: (s) => s.settings?.tags || [],
     categories: (s) => s.settings?.categories || [],
+    incomeCategories: (s) => s.settings?.incomeCategories || [],
     currency: (s) => s.settings?.currency || '¥',
     homeModules: (s) => s.settings?.homeModules || []
   },

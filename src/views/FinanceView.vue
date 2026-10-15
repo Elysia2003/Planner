@@ -17,10 +17,14 @@ const form = ref({
   category: '餐饮',
   account: '现金',
   note: '',
-  date: todayStr()
+  date: todayStr(),
+  savingGoalId: '' as string  // 空 = 不计入储蓄（流动资金）
 })
 
 const cats = computed(() => settings.categories)
+const incomeCats = computed(() => settings.incomeCategories)
+// 当前类型对应的分类
+const currentCats = computed(() => form.value.type === 'income' ? incomeCats.value : cats.value)
 
 async function add() {
   const amount = Number(form.value.amount)
@@ -31,11 +35,19 @@ async function add() {
     category: form.value.category,
     account: form.value.account,
     note: form.value.note,
-    date: form.value.date
+    date: form.value.date,
+    savingGoalId: form.value.type === 'income' && form.value.savingGoalId ? form.value.savingGoalId : null
   })
   form.value.amount = ''
   form.value.note = ''
+  form.value.savingGoalId = ''
   showNew.value = false
+}
+
+// 切换类型时重置分类为对应列表第一项
+function onTypeChange() {
+  form.value.category = currentCats.value[0] || ''
+  form.value.savingGoalId = ''
 }
 
 // 近期交易（倒序）
@@ -130,12 +142,12 @@ async function addSub() {
         <span class="ov-label">本月收入</span>
       </div>
       <div class="ov-card">
-        <span class="ov-num">¥{{ fenToYuan(finance.monthIncome - finance.monthExpense) }}</span>
-        <span class="ov-label">本月结余</span>
+        <span class="ov-num">¥{{ fenToYuan(finance.liquidAmount) }}</span>
+        <span class="ov-label">流动资金</span>
       </div>
       <div class="ov-card">
-        <span class="ov-num">{{ finance.monthBudget ? Math.round(finance.monthExpense / finance.monthBudget * 100) : 0 }}%</span>
-        <span class="ov-label">预算使用率</span>
+        <span class="ov-num">¥{{ fenToYuan(finance.totalSaved) }}</span>
+        <span class="ov-label">储蓄总额</span>
       </div>
     </div>
 
@@ -144,7 +156,7 @@ async function addSub() {
       <div class="row">
         <div class="field">
           <label class="label">类型</label>
-          <select v-model="form.type" class="select">
+          <select v-model="form.type" class="select" @change="onTypeChange">
             <option value="expense">支出</option>
             <option value="income">收入</option>
           </select>
@@ -154,15 +166,23 @@ async function addSub() {
           <input v-model="form.amount" type="number" min="0" step="0.01" class="input" placeholder="0.00" />
         </div>
         <div class="field grow">
-          <label class="label">分类</label>
+          <label class="label">{{ form.type === 'income' ? '收入分类' : '支出分类' }}</label>
           <select v-model="form.category" class="select">
-            <option v-for="c in cats" :key="c" :value="c">{{ c }}</option>
+            <option v-for="c in currentCats" :key="c" :value="c">{{ c }}</option>
           </select>
         </div>
         <div class="field">
           <label class="label">日期</label>
           <input v-model="form.date" type="date" class="input" />
         </div>
+      </div>
+      <!-- 收入时：计入储蓄 -->
+      <div v-if="form.type === 'income'" class="field">
+        <label class="label">计入储蓄（可选）</label>
+        <select v-model="form.savingGoalId" class="select">
+          <option value="">不计入储蓄（计入流动资金）</option>
+          <option v-for="s in finance.savingGoals" :key="s.id" :value="s.id">{{ s.title }}（已存 ¥{{ fenToYuan(s.savedAmount) }}）</option>
+        </select>
       </div>
       <div class="row">
         <div class="field grow">

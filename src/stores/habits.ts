@@ -13,9 +13,14 @@ export const useHabitStore = defineStore('habits', {
   state: (): HabitState => ({ habits: [], checkins: [], loaded: false }),
   getters: {
     active: (s) => s.habits.filter(h => !h.archived),
-    // 某习惯的打卡日期集合
+    // 某习惯的打卡日期集合（仅成功打卡，value>0）
     datesOf: (s) => (habitId: string) =>
-      s.checkins.filter(c => c.habitId === habitId).map(c => c.date)
+      s.checkins.filter(c => c.habitId === habitId && c.value > 0).map(c => c.date),
+    // 某习惯某天的未完成原因
+    missReasonOf: (s) => (habitId: string, date: string) => {
+      const c = s.checkins.find(x => x.habitId === habitId && x.date === date && x.value <= 0)
+      return c?.missedReason || ''
+    }
   },
   actions: {
     async load() {
@@ -68,6 +73,8 @@ export const useHabitStore = defineStore('habits', {
     async recordMiss(habitId: string, date: string, reason: string) {
       const existing = this.checkins.find(c => c.habitId === habitId && c.date === date)
       if (existing) {
+        // 已存在记录（可能是误打卡 value=1），一律标记为未完成并记录原因
+        existing.value = 0
         existing.missedReason = reason
         await db.checkins.put(toPlain(existing))
       } else {

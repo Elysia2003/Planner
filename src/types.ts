@@ -148,6 +148,7 @@ export interface Transaction {
   account: string
   note: string
   date: string            // YYYY-MM-DD
+  savingGoalId: string | null  // 收入可指定计入某储蓄目标；null = 流动资金
   createdAt: number
 }
 
@@ -221,7 +222,8 @@ export interface Settings {
   language: 'zh' | 'en'
   homeModules: string[]   // 首页显示的模块顺序
   tags: string[]          // 自定义标签库
-  categories: string[]    // 自定义记账分类
+  categories: string[]    // 自定义支出分类
+  incomeCategories: string[]  // 自定义收入分类
   createdAt: number
   updatedAt: number
 }

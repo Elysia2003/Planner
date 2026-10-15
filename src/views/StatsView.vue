@@ -84,9 +84,12 @@ async function renderFinance() {
   const chart = echarts.init(financeEl.value)
   chart.setOption({
     tooltip: { trigger: 'axis', formatter: (p: any) => `${p[0].name}: ¥${fenToYuan(p[0].value)}` },
-    grid: { left: 50, right: 20, top: 20, bottom: 30 },
+    grid: { left: 60, right: 20, top: 20, bottom: 30 },
     xAxis: { type: 'category', data: monthTrend.value.map(m => m.label), axisLabel: { color: textColor() } },
-    yAxis: { type: 'value', axisLabel: { color: textColor() } },
+    yAxis: {
+      type: 'value',
+      axisLabel: { color: textColor(), formatter: (v: number) => '¥' + fenToYuan(v) }
+    },
     series: [{
       name: '支出', type: 'line', smooth: true, data: monthTrend.value.map(m => m.amount),
       itemStyle: { color: '#b04a4a' }, areaStyle: { opacity: .12 }

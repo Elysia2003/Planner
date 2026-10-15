@@ -47,6 +47,18 @@ export const useFinanceStore = defineStore('finance', {
       const b = s.budgets.find(x => x.month === m && x.period === 'month' && !x.category)
       return b?.amount || 0
     },
+    // 储蓄总额（所有储蓄目标已存金额）
+    totalSaved: (s) => s.savingGoals.reduce((sum, g) => sum + g.savedAmount, 0),
+    // 流动资金 = 未计入储蓄的收入 - 全部支出
+    liquidAmount: (s) => {
+      const income = s.transactions
+        .filter(t => t.type === 'income' && !t.savingGoalId)
+        .reduce((sum, t) => sum + t.amount, 0)
+      const expense = s.transactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0)
+      return income - expense
+    },
     // 即将到期的订阅（未来30天）
     upcomingSubscriptions: (s) => {
       const now = new Date()
@@ -71,10 +83,19 @@ export const useFinanceStore = defineStore('finance', {
         id: uid(), type: data.type || 'expense', amount: data.amount ?? 0,
         category: data.category || '其他', account: data.account || '现金',
         note: data.note || '', date: data.date || new Date().toISOString().slice(0, 10),
+        savingGoalId: data.savingGoalId || null,
         createdAt: now()
       }
       await db.transactions.add(toPlain(t))
       this.transactions.push(t)
+      // 收入计入储蓄目标：更新该目标的已存金额
+      if (t.type === 'income' && t.savingGoalId) {
+        const goal = this.savingGoals.find(g => g.id === t.savingGoalId)
+        if (goal) {
+          goal.savedAmount += t.amount
+          await db.savingGoals.put(toPlain(goal))
+        }
+      }
       return t
     },
     async updateTransaction(id: string, patch: Partial<Transaction>) {
