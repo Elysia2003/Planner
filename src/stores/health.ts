@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { db, uid, now } from '@/db'
+import { db, uid, now, toPlain } from '@/db'
 import type { HealthRecord, MedicalVisit } from '@/types'
 
 interface HealthState {
@@ -33,12 +33,30 @@ export const useHealthStore = defineStore('health', {
         existing.value = value
         existing.unit = unit
         existing.note = note
-        await db.health.put(existing)
+        await db.health.put(toPlain(existing))
       } else {
         const r: HealthRecord = { id: uid(), type, value, unit, date, note, createdAt: now() }
-        await db.health.add(r)
+        await db.health.add(toPlain(r))
         this.records.push(r)
       }
+    },
+    // 喝水 +1（当日累计）
+    async addWater(date: string, amount = 1) {
+      const existing = this.records.find(r => r.type === 'water' && r.date === date)
+      if (existing) {
+        existing.value += amount
+        await db.health.put(toPlain(existing))
+        return existing.value
+      } else {
+        const r: HealthRecord = { id: uid(), type: 'water', value: amount, unit: '杯', date, note: '', createdAt: now() }
+        await db.health.add(toPlain(r))
+        this.records.push(r)
+        return amount
+      }
+    },
+    // 当日喝水总量
+    todayWater(date: string): number {
+      return this.records.find(r => r.type === 'water' && r.date === date)?.value || 0
     },
     async removeRecord(id: string) {
       await db.health.delete(id)
@@ -50,7 +68,7 @@ export const useHealthStore = defineStore('health', {
         doctor: data.doctor || '', diagnosis: data.diagnosis || '',
         prescription: data.prescription || '', note: data.note || '', createdAt: now()
       }
-      await db.visits.add(v)
+      await db.visits.add(toPlain(v))
       this.visits.push(v)
     }
   }

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { db, ensureSettings, uid, now } from '@/db'
+import { db, ensureSettings, uid, now, toPlain } from '@/db'
 import type { Goal, Milestone } from '@/types'
 
 interface GoalState {
@@ -42,7 +42,7 @@ export const useGoalStore = defineStore('goals', {
         createdAt: now(),
         updatedAt: now()
       }
-      await db.goals.add(g)
+      await db.goals.add(toPlain(g))
       this.goals.push(g)
       return g
     },
@@ -50,18 +50,25 @@ export const useGoalStore = defineStore('goals', {
       const g = this.goals.find(x => x.id === id)
       if (!g) return
       Object.assign(g, patch, { updatedAt: now() })
-      await db.goals.put(g)
+      await db.goals.put(toPlain(g))
     },
     async remove(id: string) {
       await db.goals.delete(id)
       this.goals = this.goals.filter(g => g.id !== id)
+      // 级联删除子目标
+      const children = this.goals.filter(g => g.parentId === id)
+      if (children.length) {
+        const childIds = children.map(c => c.id)
+        await db.goals.bulkDelete(childIds)
+        this.goals = this.goals.filter(g => !childIds.includes(g.id))
+      }
     },
     async setProgress(id: string, progress: number) {
       const g = this.goals.find(x => x.id === id)
       if (!g) return
       g.progress = Math.max(0, Math.min(100, progress))
       g.updatedAt = now()
-      await db.goals.put(g)
+      await db.goals.put(toPlain(g))
     },
     async addMilestone(goalId: string, title: string, date: string) {
       const g = this.goals.find(x => x.id === goalId)
@@ -69,13 +76,13 @@ export const useGoalStore = defineStore('goals', {
       const m: Milestone = { id: uid(), title, date, done: false }
       g.milestones.push(m)
       g.updatedAt = now()
-      await db.goals.put(g)
+      await db.goals.put(toPlain(g))
     },
     async toggleMilestone(goalId: string, milestoneId: string) {
       const g = this.goals.find(x => x.id === goalId)
       if (!g) return
       const m = g.milestones.find(x => x.id === milestoneId)
-      if (m) { m.done = !m.done; g.updatedAt = now(); await db.goals.put(g) }
+      if (m) { m.done = !m.done; g.updatedAt = now(); await db.goals.put(toPlain(g)) }
     },
     async archive(id: string, reason = '') {
       await this.update(id, { archived: true, abandonedReason: reason })

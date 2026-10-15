@@ -57,6 +57,12 @@ export function now(): number {
   return Date.now()
 }
 
+// Vue reactive proxy 对象无法被 IndexedDB 结构化克隆（DataCloneError）。
+// 所有写库前先转成纯对象。
+export function toPlain<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj))
+}
+
 // ---------- 备份 / 导出 ----------
 export async function exportAll(): Promise<BackupPayload> {
   const [goals, tasks, habits, checkins, health, visits, transactions,

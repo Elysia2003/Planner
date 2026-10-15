@@ -7,7 +7,6 @@ const health = useHealthStore()
 
 const types = [
   { key: 'weight', name: '体重', unit: 'kg' },
-  { key: 'water', name: '饮水', unit: '杯' },
   { key: 'sleep', name: '睡眠', unit: '小时' },
   { key: 'height', name: '身高', unit: 'cm' },
   { key: 'bmi', name: 'BMI', unit: '' },
@@ -15,7 +14,7 @@ const types = [
   { key: 'steps', name: '步数', unit: '步' }
 ] as const
 
-const activeType = ref<'weight' | 'water' | 'sleep' | 'height' | 'bmi' | 'bodyfat' | 'steps'>('weight')
+const activeType = ref<'weight' | 'sleep' | 'height' | 'bmi' | 'bodyfat' | 'steps'>('weight')
 const value = ref('')
 const date = ref(todayStr())
 const showVisit = ref(false)
@@ -27,6 +26,12 @@ const records = computed(() =>
   health.records.filter(r => r.type === activeType.value).sort((a, b) => b.date.localeCompare(a.date))
 )
 const latest = computed(() => health.latest(activeType.value))
+
+// 喝水
+const waterToday = computed(() => health.todayWater(todayStr()))
+async function drinkWater() {
+  await health.addWater(todayStr(), 1)
+}
 
 async function save() {
   const v = Number(value.value)
@@ -52,6 +57,18 @@ async function addVisit() {
       </div>
       <button class="btn primary" @click="showVisit = !showVisit">＋ 记录就诊</button>
     </header>
+
+    <!-- 喝水快捷按钮 -->
+    <div class="card water-card">
+      <div class="water-info">
+        <span class="water-emoji">💧</span>
+        <div class="water-text">
+          <span class="water-label">今日饮水</span>
+          <span class="water-count">{{ waterToday }} <em>杯</em></span>
+        </div>
+      </div>
+      <button class="btn primary water-btn" @click="drinkWater">＋ 喝一杯</button>
+    </div>
 
     <!-- 类型切换 -->
     <div class="tabs">
@@ -156,6 +173,17 @@ async function addVisit() {
 .tab.on { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
 
 .record-card { margin-bottom: 14px; }
+.water-card {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; padding: 16px;
+}
+.water-info { display: flex; align-items: center; gap: 12px; }
+.water-emoji { font-size: 30px; line-height: 1; }
+.water-text { display: flex; flex-direction: column; }
+.water-label { font-size: 12.5px; color: var(--ink-3); }
+.water-count { font-size: 26px; font-weight: 650; color: var(--accent); }
+.water-count em { font-style: normal; font-size: 14px; font-weight: 500; color: var(--ink-3); }
+.water-btn { font-size: 14px; padding: 10px 18px; }
 .current { margin-bottom: 12px; }
 .current-label { font-size: 13px; color: var(--ink-3); display: block; }
 .current-value { font-size: 30px; font-weight: 650; }

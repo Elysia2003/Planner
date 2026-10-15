@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { db, ensureSettings } from '@/db'
+import { db, ensureSettings, toPlain } from '@/db'
 import type { Settings } from '@/types'
 
 interface SettingsState {
@@ -24,7 +24,7 @@ export const useSettingsStore = defineStore('settings', {
     async update(patch: Partial<Settings>) {
       if (!this.settings) return
       Object.assign(this.settings, patch, { updatedAt: Date.now() })
-      await db.settings.put(this.settings)
+      await db.settings.put(toPlain(this.settings))
       if (patch.theme) this.applyTheme()
     },
     async setTheme(theme: Settings['theme']) {

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { db, uid, now } from '@/db'
+import { db, uid, now, toPlain } from '@/db'
 import { todayStr, calcStreak, colorFor } from '@/utils'
 import type { Habit, Checkin } from '@/types'
 
@@ -37,7 +37,7 @@ export const useHabitStore = defineStore('habits', {
         createdAt: now(),
         updatedAt: now()
       }
-      await db.habits.add(h)
+      await db.habits.add(toPlain(h))
       this.habits.push(h)
       return h
     },
@@ -45,7 +45,7 @@ export const useHabitStore = defineStore('habits', {
       const h = this.habits.find(x => x.id === id)
       if (!h) return
       Object.assign(h, patch, { updatedAt: now() })
-      await db.habits.put(h)
+      await db.habits.put(toPlain(h))
     },
     async remove(id: string) {
       await db.habits.delete(id)
@@ -61,7 +61,7 @@ export const useHabitStore = defineStore('habits', {
         this.checkins = this.checkins.filter(c => c.id !== existing.id)
       } else {
         const c: Checkin = { id: uid(), habitId, date, value: 1, note, missedReason: '', createdAt: now() }
-        await db.checkins.add(c)
+        await db.checkins.add(toPlain(c))
         this.checkins.push(c)
       }
     },
@@ -69,10 +69,10 @@ export const useHabitStore = defineStore('habits', {
       const existing = this.checkins.find(c => c.habitId === habitId && c.date === date)
       if (existing) {
         existing.missedReason = reason
-        await db.checkins.put(existing)
+        await db.checkins.put(toPlain(existing))
       } else {
         const c: Checkin = { id: uid(), habitId, date, value: 0, note: '', missedReason: reason, createdAt: now() }
-        await db.checkins.add(c)
+        await db.checkins.add(toPlain(c))
         this.checkins.push(c)
       }
     },

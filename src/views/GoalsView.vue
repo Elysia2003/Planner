@@ -75,6 +75,11 @@ async function archive(g: Goal) {
   const reason = prompt('为什么放弃？(可选)') || ''
   await goals.archive(g.id, reason)
 }
+
+async function removeGoal(g: Goal) {
+  if (!confirm(`确定删除目标「${g.title}」？此操作不可恢复，关联任务不会被删除但会失去目标关联。`)) return
+  await goals.remove(g.id)
+}
 </script>
 
 <template>
@@ -128,6 +133,7 @@ async function archive(g: Goal) {
           <div class="goal-actions">
             <button class="btn ghost sm" @click="startEdit(g)">✎</button>
             <button class="btn ghost sm danger" @click="archive(g)">归档</button>
+            <button class="btn ghost sm danger" @click="removeGoal(g)">删除</button>
           </div>
         </div>
         <h3 class="goal-title">{{ g.title }}</h3>

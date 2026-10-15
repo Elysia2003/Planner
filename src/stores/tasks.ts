@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { db, uid, now } from '@/db'
+import { db, uid, now, toPlain } from '@/db'
 import { todayStr, matchesRepeat } from '@/utils'
 import type { Task, RepeatRule, Subtask } from '@/types'
 
@@ -57,7 +57,7 @@ export const useTaskStore = defineStore('tasks', {
         completedAt: null,
         deletedAt: null
       }
-      await db.tasks.add(t)
+      await db.tasks.add(toPlain(t))
       this.tasks.push(t)
       return t
     },
@@ -65,7 +65,7 @@ export const useTaskStore = defineStore('tasks', {
       const t = this.tasks.find(x => x.id === id)
       if (!t) return
       Object.assign(t, patch, { updatedAt: now() })
-      await db.tasks.put(t)
+      await db.tasks.put(toPlain(t))
     },
     async setStatus(id: string, status: Task['status']) {
       const t = this.tasks.find(x => x.id === id)
@@ -73,7 +73,7 @@ export const useTaskStore = defineStore('tasks', {
       t.status = status
       t.completedAt = status === 'done' ? now() : (status === 'todo' ? null : t.completedAt)
       t.updatedAt = now()
-      await db.tasks.put(t)
+      await db.tasks.put(toPlain(t))
     },
     async addSubtask(taskId: string, title: string) {
       const t = this.tasks.find(x => x.id === taskId)
@@ -81,13 +81,13 @@ export const useTaskStore = defineStore('tasks', {
       const sub: Subtask = { id: uid(), title, done: false }
       t.subtasks.push(sub)
       t.updatedAt = now()
-      await db.tasks.put(t)
+      await db.tasks.put(toPlain(t))
     },
     async toggleSubtask(taskId: string, subtaskId: string) {
       const t = this.tasks.find(x => x.id === taskId)
       if (!t) return
       const sub = t.subtasks.find(x => x.id === subtaskId)
-      if (sub) { sub.done = !sub.done; t.updatedAt = now(); await db.tasks.put(t) }
+      if (sub) { sub.done = !sub.done; t.updatedAt = now(); await db.tasks.put(toPlain(t)) }
     },
     async softDelete(id: string) {
       await this.update(id, { deletedAt: now() })

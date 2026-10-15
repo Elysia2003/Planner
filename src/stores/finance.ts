@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { db, uid, now } from '@/db'
+import { db, uid, now, toPlain } from '@/db'
 import { currentMonthStr } from '@/utils'
 import type { Transaction, Budget, Account, SavingGoal, Subscription, Insurance } from '@/types'
 
@@ -73,7 +73,7 @@ export const useFinanceStore = defineStore('finance', {
         note: data.note || '', date: data.date || new Date().toISOString().slice(0, 10),
         createdAt: now()
       }
-      await db.transactions.add(t)
+      await db.transactions.add(toPlain(t))
       this.transactions.push(t)
       return t
     },
@@ -81,7 +81,7 @@ export const useFinanceStore = defineStore('finance', {
       const t = this.transactions.find(x => x.id === id)
       if (!t) return
       Object.assign(t, patch)
-      await db.transactions.put(t)
+      await db.transactions.put(toPlain(t))
     },
     async removeTransaction(id: string) {
       await db.transactions.delete(id)
@@ -91,37 +91,37 @@ export const useFinanceStore = defineStore('finance', {
       const existing = this.budgets.find(b => b.month === month && b.category === category)
       if (existing) {
         existing.amount = amount
-        await db.budgets.put(existing)
+        await db.budgets.put(toPlain(existing))
       } else {
         const b: Budget = { id: uid(), period: 'month', month, category, amount }
-        await db.budgets.add(b)
+        await db.budgets.add(toPlain(b))
         this.budgets.push(b)
       }
     },
     async addAccount(data: Partial<Account>) {
       const a: Account = { id: uid(), name: data.name || '账户', type: data.type || 'other', balance: data.balance ?? 0 }
-      await db.accounts.add(a)
+      await db.accounts.add(toPlain(a))
       this.accounts.push(a)
     },
     async addSavingGoal(data: Partial<SavingGoal>) {
       const g: SavingGoal = { id: uid(), title: data.title || '储蓄目标', targetAmount: data.targetAmount ?? 0, savedAmount: data.savedAmount ?? 0, targetDate: data.targetDate || null, note: data.note || '', createdAt: now() }
-      await db.savingGoals.add(g)
+      await db.savingGoals.add(toPlain(g))
       this.savingGoals.push(g)
     },
     async updateSavingGoal(id: string, patch: Partial<SavingGoal>) {
       const g = this.savingGoals.find(x => x.id === id)
       if (!g) return
       Object.assign(g, patch)
-      await db.savingGoals.put(g)
+      await db.savingGoals.put(toPlain(g))
     },
     async addSubscription(data: Partial<Subscription>) {
       const s: Subscription = { id: uid(), name: data.name || '订阅', amount: data.amount ?? 0, cycle: data.cycle || 'monthly', nextChargeDate: data.nextChargeDate || '', category: data.category || '其他', note: data.note || '', wantCancel: false }
-      await db.subscriptions.add(s)
+      await db.subscriptions.add(toPlain(s))
       this.subscriptions.push(s)
     },
     async addInsurance(data: Partial<Insurance>) {
       const i: Insurance = { id: uid(), name: data.name || '保险', type: data.type || '', premium: data.premium ?? 0, dueDate: data.dueDate || '', beneficiary: data.beneficiary || '', note: data.note || '' }
-      await db.insurances.add(i)
+      await db.insurances.add(toPlain(i))
       this.insurances.push(i)
     }
   }
